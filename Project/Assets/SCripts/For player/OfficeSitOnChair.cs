@@ -1,21 +1,21 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
 using UnityEngine.InputSystem.XR;
 
 public class OfficeSitOnChair : MonoBehaviour
 {
-    public Transform mainCamera;             // Public Camera reference
+    public Transform mainCamera;
     public Transform mainCamera2;
     public TrackedPoseDriver trackedPoseDriver;
-    public Transform chairPosition;          // Poziția de așezare pe scaun
-    public Transform returnPosition;         // Poziția de revenire
-    public float sittingHeightOffset = 0.5f; // Offset-ul înălțimii pentru așezare
-                                             //public AudioClip sitSound;               // Sunet la așezare
-                                             //public AudioClip standSound;             // Sunet la ridicare
-    public Transform playerTarget;
-
+    public Transform chairPosition;
+    public Transform returnPosition;
+    public float sittingHeightOffset = 0.5f;
+    private float sitDelay = 3f;
     private bool sitting = false;
     private AudioSource audioSource;
     private Vector3 startingPosition;
+
+    public float smoothTime = 0.5f;    // Timpul pentru mișcarea smooth
 
     void Start()
     {
@@ -26,54 +26,58 @@ public class OfficeSitOnChair : MonoBehaviour
             audioSource = gameObject.AddComponent<AudioSource>();
         }
 
-        // Configurare audio 3D
-        audioSource.spatialBlend = 1.0f; // 3D audio
+        audioSource.spatialBlend = 1.0f;
         audioSource.minDistance = 0.4f;
-        audioSource.maxDistance = 0.6f;    // Ajustează după necesități
+        audioSource.maxDistance = 0.6f;
     }
 
-    void Update()
+    public void TriggerSitDown()
     {
-        // Verifică dacă butonul de așezare este apăsat
-        if (Input.GetKeyDown(KeyCode.Space)) // Poți schimba la un input specific XR
-        {
-                SitDown();
-        }
+        StartCoroutine(SitDownWithDelay());
     }
 
-    private void SitDown()
+    private IEnumerator SitDownWithDelay()
     {
-        // Mută XR Origin la poziția scaunului
-        mainCamera.position = chairPosition.position;
-        mainCamera2.position = chairPosition.position;
+        Debug.Log($"Aștept {sitDelay} secunde înainte de așezare...");
+        yield return new WaitForSeconds(sitDelay);
+
+        Debug.Log("Player începe să se așeze...");
+        yield return StartCoroutine(SmoothDampTransition(mainCamera, chairPosition.position));
+        yield return StartCoroutine(SmoothDampTransition(mainCamera2, chairPosition.position));
 
         trackedPoseDriver.trackingType = TrackedPoseDriver.TrackingType.RotationOnly;
         sitting = true;
 
-        Debug.Log("Player s-a așezat pe scaun.");
-
-        //// Redă sunetul de așezare
-        //if (sitSound != null)
-        //{
-        //    audioSource.PlayOneShot(sitSound);
-        //}
+        Debug.Log("Player s-a așezat automat pe scaun.");
     }
 
-    //private void StandUp()
-    //{
-    //    // Revine la poziția inițială
-    //    xrOrigin.position = returnPosition.position;
+    private IEnumerator SmoothDampTransition(Transform target, Vector3 destination)
+    {
+        Vector3 velocity = Vector3.zero; // Viteza curentă a mișcării
+        float elapsedTime = 0f;
+        float duration = 2f; // Durata maximă a tranziției
+        Vector3 currentPosition = target.position;
 
-    //    // Resetează poziția camerei
-    //    cameraTransform.localPosition = Vector3.zero;
+        while (elapsedTime < duration)
+        {
+            target.position = Vector3.SmoothDamp(currentPosition, destination, ref velocity, smoothTime);
+            currentPosition = target.position;
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
 
-    //    sitting = false;
-    //    Debug.Log("Player s-a ridicat de pe scaun.");
+        // Asigură-te că poziția finală este exact cea dorită
+        target.position = destination;
+    }
 
-    //    //// Redă sunetul de ridicare
-    //    //if (standSound != null)
-    //    //{
-    //    //    audioSource.PlayOneShot(standSound);
-    //    //}
-    //}
+    private void StandUp()
+    {
+        StartCoroutine(SmoothDampTransition(mainCamera, returnPosition.position));
+        StartCoroutine(SmoothDampTransition(mainCamera2, returnPosition.position));
+
+        trackedPoseDriver.trackingType = TrackedPoseDriver.TrackingType.RotationAndPosition;
+
+        sitting = false;
+        Debug.Log("Player s-a ridicat de pe scaun.");
+    }
 }
