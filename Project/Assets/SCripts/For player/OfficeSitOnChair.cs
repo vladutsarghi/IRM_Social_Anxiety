@@ -19,7 +19,6 @@ public class OfficeSitOnChair : MonoBehaviour
 
     void Start()
     {
-        startingPosition = returnPosition.position;
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
         {
@@ -53,7 +52,7 @@ public class OfficeSitOnChair : MonoBehaviour
 
     private IEnumerator SmoothDampTransition(Transform target, Vector3 destination)
     {
-        Vector3 velocity = Vector3.zero; // Viteza curentă a mișcării
+        Vector3 velocity = Vector3.zero; // Viteza curentă a mișcăriie
         float elapsedTime = 0f;
         float duration = 2f; // Durata maximă a tranziției
         Vector3 currentPosition = target.position;
@@ -70,11 +69,8 @@ public class OfficeSitOnChair : MonoBehaviour
         target.position = destination;
     }
 
-    private void StandUp()
+    public void StandUp()
     {
-        StartCoroutine(SmoothDampTransition(mainCamera, returnPosition.position));
-        StartCoroutine(SmoothDampTransition(mainCamera2, returnPosition.position));
-
         trackedPoseDriver.trackingType = TrackedPoseDriver.TrackingType.RotationAndPosition;
 
         sitting = false;
